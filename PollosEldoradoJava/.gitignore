@@ -1,0 +1,11 @@
+target/
+
+nbproject/private/
+
+*.class
+
+.idea/
+
+.vscode/
+
+src/main/resources/db.properties
