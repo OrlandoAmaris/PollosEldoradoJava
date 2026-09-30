@@ -45,3 +45,7 @@ registro_mortalidad
 ## Autor
 
 Orlando Amaris
+
+## Estado
+
+Modulo CRUD implementado y probado localmente.
