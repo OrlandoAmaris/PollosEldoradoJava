@@ -1,0 +1,5 @@
+PROYECTO: Pollos ELDORADO - Registro de Mortalidad
+EVIDENCIA: Codificación de módulos del software. GA7-220501096-AA2-EV01
+
+Repositorio remoto:
+https://https://github.com/OrlandoAmaris/PollosEldoradoJava

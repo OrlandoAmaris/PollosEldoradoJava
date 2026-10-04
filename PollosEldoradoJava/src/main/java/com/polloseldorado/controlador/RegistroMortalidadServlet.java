@@ -19,6 +19,10 @@ public class RegistroMortalidadServlet extends HttpServlet {
     private final RegistroMortalidadDAO registroMortalidadDAO =
             new RegistroMortalidadDAO();
 
+    /**
+     * Procesa solicitudes GET.
+     * Se utiliza para consultar y editar registros.
+     */
     @Override
     protected void doGet(
             HttpServletRequest request,
@@ -29,52 +33,85 @@ public class RegistroMortalidadServlet extends HttpServlet {
 
         if ("editar".equals(accion)) {
 
-            int idRegistro = Integer.parseInt(
-                    request.getParameter("idRegistro"));
+            String parametroId =
+                    request.getParameter("idRegistro");
 
-            RegistroMortalidad registroEditar =
-                    registroMortalidadDAO.obtenerPorId(idRegistro);
+            if (parametroId != null
+                    && !parametroId.isEmpty()) {
 
-            request.setAttribute(
-                    "registroEditar",
-                    registroEditar);
+                int idRegistro =
+                        Integer.parseInt(parametroId);
+
+                RegistroMortalidad registroEditar =
+                        registroMortalidadDAO
+                                .obtenerPorId(idRegistro);
+
+                request.setAttribute(
+                        "registroEditar",
+                        registroEditar);
+            }
         }
 
         cargarRegistros(request, response);
     }
 
+    /**
+     * Procesa solicitudes POST.
+     * Se utiliza para guardar, actualizar y eliminar.
+     */
     @Override
     protected void doPost(
             HttpServletRequest request,
             HttpServletResponse response)
             throws ServletException, IOException {
 
-        String accion = request.getParameter("accion");
+        request.setCharacterEncoding("UTF-8");
 
-        if ("guardar".equals(accion)) {
+        String accion =
+                request.getParameter("accion");
 
-            RegistroMortalidad registro =
-                    construirRegistro(request);
+        switch (accion) {
 
-            registroMortalidadDAO.guardarRegistro(registro);
+            case "guardar":
 
-        } else if ("actualizar".equals(accion)) {
+                RegistroMortalidad nuevoRegistro =
+                        construirRegistro(request);
 
-            RegistroMortalidad registro =
-                    construirRegistro(request);
+                registroMortalidadDAO
+                        .guardarRegistro(nuevoRegistro);
 
-            registro.setIdRegistro(
-                    Integer.parseInt(
-                            request.getParameter("idRegistro")));
+                break;
 
-            registroMortalidadDAO.actualizarRegistro(registro);
+            case "actualizar":
 
-        } else if ("eliminar".equals(accion)) {
+                RegistroMortalidad registroActualizado =
+                        construirRegistro(request);
 
-            int idRegistro = Integer.parseInt(
-                    request.getParameter("idRegistro"));
+                registroActualizado.setIdRegistro(
+                        Integer.parseInt(
+                                request.getParameter(
+                                        "idRegistro")));
 
-            registroMortalidadDAO.eliminarRegistro(idRegistro);
+                registroMortalidadDAO
+                        .actualizarRegistro(
+                                registroActualizado);
+
+                break;
+
+            case "eliminar":
+
+                int idRegistro =
+                        Integer.parseInt(
+                                request.getParameter(
+                                        "idRegistro"));
+
+                registroMortalidadDAO
+                        .eliminarRegistro(idRegistro);
+
+                break;
+
+            default:
+                break;
         }
 
         response.sendRedirect(
@@ -101,10 +138,12 @@ public class RegistroMortalidadServlet extends HttpServlet {
                         request.getParameter("cantidad")));
 
         registro.setCausaProbable(
-                request.getParameter("causaProbable"));
+                request.getParameter(
+                        "causaProbable"));
 
         registro.setObservaciones(
-                request.getParameter("observaciones"));
+                request.getParameter(
+                        "observaciones"));
 
         return registro;
     }
@@ -115,9 +154,12 @@ public class RegistroMortalidadServlet extends HttpServlet {
             throws ServletException, IOException {
 
         List<RegistroMortalidad> registros =
-                registroMortalidadDAO.consultarRegistros();
+                registroMortalidadDAO
+                        .consultarRegistros();
 
-        request.setAttribute("registros", registros);
+        request.setAttribute(
+                "registros",
+                registros);
 
         request.getRequestDispatcher(
                 "/registroMortalidad.jsp")
