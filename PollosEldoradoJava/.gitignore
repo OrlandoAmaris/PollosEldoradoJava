@@ -1,11 +1,10 @@
+# Archivos generados por Maven y el IDE
 target/
-
 nbproject/private/
-
 *.class
-
 .idea/
-
 .vscode/
 
+# Configuracion local y credenciales
 src/main/resources/db.properties
+.env

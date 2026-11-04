@@ -7,68 +7,56 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-public class ConexionBD {
+/** Administra la conexión JDBC sin escribir credenciales en el código fuente. */
+public final class ConexionBD {
 
     private ConexionBD() {
+        // Evita crear instancias de esta clase de utilidades.
     }
 
-    public static Connection obtenerConexion()
-            throws SQLException {
-
+    public static Connection obtenerConexion() throws SQLException {
         Properties propiedades = cargarPropiedades();
+        String url = obtenerConfiguracion("DB_URL", "db.url", propiedades);
+        String usuario = obtenerConfiguracion("DB_USUARIO", "db.usuario", propiedades);
+        String contrasena = obtenerConfiguracion("DB_CONTRASENA", "db.contrasena", propiedades);
 
-        String url = propiedades.getProperty("db.url");
-        String usuario = propiedades.getProperty("db.usuario");
-        String contrasena =
-                propiedades.getProperty("db.contrasena");
-
-        if (url == null || usuario == null || contrasena == null) {
-            throw new SQLException(
-                    "Faltan propiedades de configuración de la base de datos."
-            );
+        if (vacio(url) || vacio(usuario) || contrasena == null) {
+            throw new SQLException("Falta configurar DB_URL, DB_USUARIO y DB_CONTRASENA "
+                    + "como variables de entorno o en el archivo local db.properties.");
         }
 
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (ClassNotFoundException error) {
-            throw new SQLException(
-                    "No se encontró el controlador JDBC de MySQL.",
-                    error
-            );
+            throw new SQLException("No se encontró el controlador JDBC de MySQL.", error);
         }
 
-        return DriverManager.getConnection(
-                url,
-                usuario,
-                contrasena
-        );
+        return DriverManager.getConnection(url, usuario, contrasena);
     }
 
-    private static Properties cargarPropiedades() {
-
+    private static Properties cargarPropiedades() throws SQLException {
         Properties propiedades = new Properties();
-
-        try (InputStream entrada =
-                     ConexionBD.class.getResourceAsStream(
-                             "/db.properties")) {
-
-            if (entrada == null) {
-                throw new IllegalStateException(
-                        "No se encontró el archivo db.properties "
-                        + "en el classpath."
-                );
+        try (InputStream entrada = ConexionBD.class.getResourceAsStream("/db.properties")) {
+            if (entrada != null) {
+                propiedades.load(entrada);
             }
-
-            propiedades.load(entrada);
-
-            return propiedades;
-
         } catch (IOException error) {
-
-            throw new IllegalStateException(
-                    "No fue posible leer db.properties.",
-                    error
-            );
+            throw new SQLException("No fue posible leer el archivo local db.properties.", error);
         }
+        return propiedades;
+    }
+
+    private static String obtenerConfiguracion(String variableEntorno,
+                                               String propiedad,
+                                               Properties propiedades) {
+        String valor = System.getenv(variableEntorno);
+        if (valor == null || valor.trim().isEmpty()) {
+            valor = propiedades.getProperty(propiedad);
+        }
+        return valor == null ? null : valor.trim();
+    }
+
+    private static boolean vacio(String valor) {
+        return valor == null || valor.trim().isEmpty();
     }
 }

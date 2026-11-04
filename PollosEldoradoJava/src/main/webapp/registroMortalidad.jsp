@@ -98,6 +98,14 @@
         Registro de Mortalidad
     </h2>
 
+    <c:if test="${not empty mensaje}">
+        <p role="status" style="padding:10px;border-radius:5px;
+           background-color:${tipoMensaje eq 'exito' ? '#e2f5e8' : '#fde8e8'};
+           color:${tipoMensaje eq 'exito' ? '#14532d' : '#991b1b'};">
+            <c:out value="${mensaje}"/>
+        </p>
+    </c:if>
+
     <c:choose>
 
         <c:when test="${not empty registroEditar}">
@@ -251,17 +259,17 @@
 
                 <tr>
 
-                    <td>${registro.idRegistro}</td>
+                    <td><c:out value="${registro.idRegistro}"/></td>
 
-                    <td>${registro.fecha}</td>
+                    <td><c:out value="${registro.fecha}"/></td>
 
-                    <td>${registro.galpon}</td>
+                    <td><c:out value="${registro.galpon}"/></td>
 
-                    <td>${registro.cantidad}</td>
+                    <td><c:out value="${registro.cantidad}"/></td>
 
-                    <td>${registro.causaProbable}</td>
+                    <td><c:out value="${registro.causaProbable}"/></td>
 
-                    <td>${registro.observaciones}</td>
+                    <td><c:out value="${registro.observaciones}"/></td>
 
                     <td>
 

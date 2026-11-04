@@ -1,0 +1,2 @@
+Repositorio GitHub del proyecto Pollos ElDorado:
+https://github.com/OrlandoAmaris/PollosEldoradoJava
