@@ -1,5 +1,26 @@
-PROYECTO: Pollos ELDORADO - Registro de Mortalidad
-EVIDENCIA: Codificación de módulos del software. GA7-220501096-AA2-EV01
+PROYECTO: Sistema de Gestión Avícola — Pollos ElDorado
 
-Repositorio remoto:
-https://https://github.com/OrlandoAmaris/PollosEldoradoJava
+EVIDENCIA: GA7-220501096-AA3-EV01
+ACTIVIDAD: Codificación de módulos de software
+
+Repositorio GitHub:
+https://github.com/OrlandoAmaris/PollosEldoradoJava
+
+Carpeta del proyecto:
+https://github.com/OrlandoAmaris/PollosEldoradoJava/tree/main/PollosEldoradoJava
+
+Tecnologías utilizadas:
+- Java
+- Java Servlets y JSP
+- Maven
+- JDBC
+- MySQL
+
+Funcionalidades verificadas:
+- Conexión a la base de datos MySQL.
+- Registro de mortalidad.
+- Consulta de registros.
+- Actualización de registros.
+- Eliminación de registros.
+
+Las pruebas funcionales se realizaron en el entorno local con Apache NetBeans y MySQL.

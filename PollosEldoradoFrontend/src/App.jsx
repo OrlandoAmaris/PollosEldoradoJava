@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import Header from "./components/Header";
 import NavigationMenu from "./components/NavigationMenu";
 import MortalityForm from "./components/MortalityForm";
 import Reports from "./pages/Reports";
+import { guardarRegistroJava } from "./services/mortalityService";
+import { consultarRegistros } from "./services/mortalityService";
 
 import "./App.css";
 
@@ -12,18 +14,37 @@ function App() {
   const [usuario, setUsuario] = useState("");
   const [clave, setClave] = useState("");
 
-  const [registros, setRegistros] = useState(() => {
-  try {
-    return JSON.parse(localStorage.getItem("registrosMortalidad")) || [];
-  } catch {
-    return [];
-  }
-});
+ const [registros, setRegistros] = useState([]);
+const [cargandoRegistros, setCargandoRegistros] = useState(true);
+const [errorRegistros, setErrorRegistros] = useState("");
+
 
   const [galpon, setGalpon] = useState("");
   const [fecha, setFecha] = useState("");
   const [muertas, setMuertas] = useState("");
   const [observacion, setObservacion] = useState("");
+
+  useEffect(() => {
+  async function cargarRegistrosDesdeJava() {
+    try {
+      setCargandoRegistros(true);
+      setErrorRegistros("");
+
+      const datos = await consultarRegistros();
+
+      setRegistros(datos);
+    } catch (error) {
+      console.error("Error consultando registros:", error);
+      setErrorRegistros(
+        "No fue posible cargar los registros desde Java. Verifica que Tomcat esté iniciado."
+      );
+    } finally {
+      setCargandoRegistros(false);
+    }
+  }
+
+  cargarRegistrosDesdeJava();
+}, []);
 
   function iniciarSesion(e) {
     e.preventDefault();
@@ -43,39 +64,36 @@ function App() {
     setPantalla("login");
   }
 
-  function guardarRegistro(e) {
+
+async function guardarRegistro(e) {
   e.preventDefault();
 
-  // Validar que se seleccione un galpón.
   if (!galpon) {
     alert("Debe seleccionar un galpón.");
     return;
   }
 
-  // Validar que se ingrese una fecha.
   if (!fecha) {
     alert("Debe seleccionar la fecha del registro.");
     return;
   }
 
-  // Validar que la cantidad sea un número entero no negativo.
   const cantidad = Number(muertas);
 
   if (
     muertas === "" ||
     !Number.isInteger(cantidad) ||
-    cantidad < 0
+    cantidad < 1
   ) {
-    alert("La cantidad de aves debe ser un número entero igual o mayor a cero.");
+    alert("La cantidad de aves debe ser un número entero mayor que cero.");
     return;
   }
 
-  // Validar que la fecha no sea posterior al día actual.
   const hoy = new Date();
   const fechaActual = [
     hoy.getFullYear(),
     String(hoy.getMonth() + 1).padStart(2, "0"),
-    String(hoy.getDate()).padStart(2, "0")
+    String(hoy.getDate()).padStart(2, "0"),
   ].join("-");
 
   if (fecha > fechaActual) {
@@ -88,25 +106,30 @@ function App() {
     galpon,
     fecha,
     muertas: cantidad,
-    observacion: observacion.trim()
+    causaProbable: "No especificada",
+    observacion: observacion.trim(),
   };
 
-  const actualizados = [...registros, nuevoRegistro];
+  try {
+    await guardarRegistroJava(nuevoRegistro);
 
-  setRegistros(actualizados);
+    const datosActualizados = await consultarRegistros();
 
-  localStorage.setItem(
-    "registrosMortalidad",
-    JSON.stringify(actualizados)
-  );
+    setRegistros(datosActualizados);
 
-  setGalpon("");
-  setFecha("");
-  setMuertas("");
-  setObservacion("");
+    setGalpon("");
+    setFecha("");
+    setMuertas("");
+    setObservacion("");
 
-  alert("Registro guardado correctamente.");
-  setPantalla("reportes");
+    alert("Registro guardado correctamente en Java.");
+    setPantalla("reportes");
+  } catch (error) {
+    console.error(error);
+    alert(
+      "No fue posible guardar el registro en Java. Verifique que Tomcat esté activo."
+    );
+  }
 }
 
 
@@ -196,7 +219,8 @@ function App() {
             {pantalla === "reportes" && (
               <Reports
                 registros={registros}
-                totalMuertas={totalMuertas}
+                cargando={cargandoRegistros}
+                error={errorRegistros}
               />
             )}
           </main>

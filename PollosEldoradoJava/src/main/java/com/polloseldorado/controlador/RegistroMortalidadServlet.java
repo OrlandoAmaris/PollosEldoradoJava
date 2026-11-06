@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Controlador web para registrar, consultar, actualizar y eliminar
@@ -23,6 +24,33 @@ public class RegistroMortalidadServlet extends HttpServlet {
 
     private final RegistroMortalidadDAO registroMortalidadDAO =
             new RegistroMortalidadDAO();
+    private boolean esSolicitudJSON(HttpServletRequest request) {
+    return "json".equalsIgnoreCase(request.getParameter("format"))
+            || request.getHeader("Accept") != null
+            && request.getHeader("Accept").contains("application/json");
+}
+
+private String escaparJSON(String texto) {
+    if (texto == null) {
+        return "";
+    }
+
+    return texto
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t");
+}
+
+private void responderJSON(HttpServletResponse response,
+                           int estado,
+                           String contenido) throws IOException {
+    response.setStatus(estado);
+    response.setContentType("application/json");
+    response.setCharacterEncoding("UTF-8");
+    response.getWriter().write(contenido);
+}
 
     /** Consulta los registros y prepara los datos de edición cuando aplica. */
     @Override
@@ -49,7 +77,29 @@ public class RegistroMortalidadServlet extends HttpServlet {
             }
         }
 
-        cargarRegistros(request, response);
+        if (esSolicitudJSON(request)) {
+    List<RegistroMortalidad> registros =
+            registroMortalidadDAO.consultarRegistros();
+
+    String json = registros.stream()
+            .map(registro -> "{"
+                    + "\"idRegistro\":" + registro.getIdRegistro() + ","
+                    + "\"fecha\":\"" + escaparJSON(
+                            registro.getFecha().toString()) + "\","
+                    + "\"galpon\":" + registro.getGalpon() + ","
+                    + "\"cantidad\":" + registro.getCantidad() + ","
+                    + "\"causaProbable\":\"" + escaparJSON(
+                            registro.getCausaProbable()) + "\","
+                    + "\"observaciones\":\"" + escaparJSON(
+                            registro.getObservaciones()) + "\""
+                    + "}")
+            .collect(Collectors.joining(",", "[", "]"));
+
+    responderJSON(response, 200, "{\"registros\":" + json + "}");
+    return;
+}
+
+cargarRegistros(request, response);
     }
 
     /** Procesa las operaciones enviadas desde los formularios de la vista. */
@@ -106,32 +156,90 @@ public class RegistroMortalidadServlet extends HttpServlet {
                     "error");
         }
 
-        response.sendRedirect(request.getContextPath() + "/registro-mortalidad");
+        if (esSolicitudJSON(request)) {
+    Object mensaje = request.getSession().getAttribute("mensaje");
+    Object tipoMensaje = request.getSession().getAttribute("tipoMensaje");
+
+    String texto = mensaje == null
+            ? "Solicitud procesada."
+            : mensaje.toString();
+
+    boolean exito = "exito".equals(tipoMensaje);
+
+    request.getSession().removeAttribute("mensaje");
+    request.getSession().removeAttribute("tipoMensaje");
+
+    String json = "{"
+            + "\"exito\":" + exito + ","
+            + "\"mensaje\":\"" + escaparJSON(texto) + "\""
+            + "}";
+
+    responderJSON(response, exito ? 200 : 400, json);
+    return;
+}
+
+response.sendRedirect(request.getContextPath() + "/registro-mortalidad");
     }
 
     /** Construye el modelo y valida los datos recibidos del formulario. */
     private RegistroMortalidad construirRegistro(HttpServletRequest request) {
-        String fechaTexto = valorObligatorio(request.getParameter("fecha"), "fecha");
-        LocalDate fecha = LocalDate.parse(fechaTexto);
-        int galpon = leerEnteroPositivo(request.getParameter("galpon"), "galpón");
-        int cantidad = leerEnteroPositivo(request.getParameter("cantidad"), "cantidad");
+    String fechaTexto = valorObligatorio(
+            request.getParameter("fecha"), "fecha");
 
-        if (galpon < 1 || galpon > 8) {
-            throw new IllegalArgumentException("El galpón debe estar entre 1 y 8.");
-        }
-        if (cantidad < 1) {
-            throw new IllegalArgumentException("La cantidad de aves muertas debe ser mayor que cero.");
-        }
+    LocalDate fecha;
 
-        RegistroMortalidad registro = new RegistroMortalidad();
-        registro.setFecha(fecha);
-        registro.setGalpon(galpon);
-        registro.setCantidad(cantidad);
-        registro.setCausaProbable(valorObligatorio(
-                request.getParameter("causaProbable"), "causa probable"));
-        registro.setObservaciones(limpiarTexto(request.getParameter("observaciones")));
-        return registro;
+    try {
+        fecha = LocalDate.parse(fechaTexto);
+    } catch (DateTimeParseException error) {
+        throw new IllegalArgumentException(
+                "La fecha debe tener un formato válido (AAAA-MM-DD).");
     }
+
+    // La fecha no puede ser futura.
+    if (fecha.isAfter(LocalDate.now())) {
+        throw new IllegalArgumentException(
+                "La fecha del registro no puede ser futura.");
+    }
+
+    int galpon = leerEnteroPositivo(
+            request.getParameter("galpon"), "galpón");
+
+    int cantidad = leerEnteroPositivo(
+            request.getParameter("cantidad"), "cantidad");
+
+    // Validar el rango de galpones de la granja.
+    if (galpon < 1 || galpon > 8) {
+        throw new IllegalArgumentException(
+                "El galpón debe estar entre 1 y 8.");
+    }
+
+    if (cantidad < 1) {
+        throw new IllegalArgumentException(
+                "La cantidad de aves muertas debe ser mayor que cero.");
+    }
+
+    String causaProbable = valorObligatorio(
+            request.getParameter("causaProbable"), "causa probable");
+
+    String observaciones = limpiarTexto(
+            request.getParameter("observaciones"));
+
+    // Limitar la longitud de las observaciones.
+    if (observaciones.length() > 250) {
+        throw new IllegalArgumentException(
+                "Las observaciones no pueden superar los 250 caracteres.");
+    }
+
+    RegistroMortalidad registro = new RegistroMortalidad();
+
+    registro.setFecha(fecha);
+    registro.setGalpon(galpon);
+    registro.setCantidad(cantidad);
+    registro.setCausaProbable(causaProbable);
+    registro.setObservaciones(observaciones);
+
+    return registro;
+}
 
     private int leerEnteroPositivo(String texto, String campo) {
         String valor = valorObligatorio(texto, campo);
